@@ -1,0 +1,95 @@
+mail to : premchandarofficial@gmail.com
+
+
+#include <Ubidots_Arduino_GPRS.h>
+#include <SoftwareSerial.h> 
+//Serial Relay - Arduino will patch a 
+//serial link between the computer and the GPRS Shield
+//at 19200 bps 8-N-1
+//Computer is connected to Hardware UART
+//GPRS Shield is connected to the Software UART
+
+
+#define APN "airtelgprs.com" 
+#define USER ""  // If your apn doesnt have username just put ""
+#define PASS ""  // If your apn doesnt have password just put ""
+#define TOKEN "jZFDCmBhexehmDepUEXsujZw64xTt8"  // Replace it with your Ubidots token
+
+#define distance_c "58b142757625426834d76db7"
+#define current_height_c "58b166287625426834d914f9" 
+#define current_volume_c "58b165bc7625426834d90ff8" 
+#define current_volume_percent_c "58b165d2762542682b472f3c"
+
+#define trigPin 9
+#define echoPin 10
+
+Ubidots client(TOKEN);  
+
+void setup() {
+  Serial.begin(19200);            // the Serial port of Arduino baud rate.  
+  client.powerUpOrDown();
+  client.setApn(APN,USER,PASS);
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+}
+
+void loop() {
+
+  int tank_height=202; /*cm*/
+  int tank_volume=3000; /*litres*/
+  float duration, distance, current_height, current_volume, current_volume_percent;
+
+  digitalWrite(trigPin, LOW); 
+  delayMicroseconds(10);
+ 
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(1000000);
+  digitalWrite(trigPin, LOW);
+  
+  duration = pulseIn(echoPin, HIGH);
+  distance = (duration / 2) * 0.0344;
+  current_height= (tank_height - distance);
+  current_volume = (current_height * tank_volume) / tank_height;
+  current_volume_percent= (current_volume * 100) / tank_volume;
+
+  if (distance >= 400 || distance <= 2){
+    Serial.println("Distance = ");
+    Serial.println("Out of range"); 
+  }
+  else {
+    Serial.print("Distance = ");
+    Serial.print(distance);
+    Serial.print(" cm");
+    Serial.println("");
+    Serial.print("Current Water Height = ");
+    Serial.print(current_height);
+    Serial.print(" cm");
+    Serial.println("");
+    Serial.print("Current Water Volume =");
+    Serial.print(current_volume);
+    Serial.print(" litres");
+    Serial.println("");
+    Serial.print("Current Water Percentage = ");
+    Serial.print(current_volume_percent);
+    Serial.print(" %");
+    Serial.println("");
+
+  // To send a value with a context is like: (ID,value,"NAME_CONTEXT:VALUE_CONTEXT","")
+  // If you don't want to send any context only put "" like this (ID,value,"","")
+  // Example with context:
+  // client.add(ID1, value_1, "Lat:9.786589", "Long:1.8688797");
+
+    client.add(distance_c,distance, "", "");
+    client.add(current_height_c,current_height, "", "");
+    client.add(current_volume_c,current_volume, "", "");
+    client.add(current_volume_percent_c,current_volume_percent, "", "");
+
+//    client.add(current_height_c,current_height, "", "",current_height_c,current_height, "", "")
+    client.sendAll();
+
+delay(1000);
+  }
+  
+
+}
